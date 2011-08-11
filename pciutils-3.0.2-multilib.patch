@@ -1,0 +1,102 @@
+diff -up pciutils-3.1.4/lib/configure.multilib pciutils-3.1.4/lib/configure
+--- pciutils-3.1.4/lib/configure.multilib	2009-08-10 16:28:53.000000000 +0200
++++ pciutils-3.1.4/lib/configure	2009-10-23 17:51:57.272127815 +0200
+@@ -50,29 +50,64 @@ sys=`echo $host | sed 's/^\([^-]*\)-\([^
+ echo " $host $rel $cpu $sys"
+ 
+ c=config.h
++cm=config.h.mk
+ m=config.mk
+-echo >$c '#define PCI_CONFIG_H'
+-echo >>$c "#define PCI_ARCH_`echo $cpu | tr '[a-z]' '[A-Z]'`"
+-echo >>$c "#define PCI_OS_`echo $sys | tr '[a-z]' '[A-Z]'`"
+ echo >$m 'WITH_LIBS='
++cat >$c <<EOF
++#define PCI_CONFIG_H
++#if defined(__x86_64__)
++#define PCI_ARCH_X86_64
++#define PCI_HAVE_PM_INTEL_CONF
++#elif defined(__ia64__)
++#define PCI_ARCH_IA64
++#define PCI_HAVE_PM_INTEL_CONF
++#elif defined(__i386__)
++#define PCI_ARCH_I386
++#define PCI_HAVE_PM_INTEL_CONF
++#elif defined(__ppc64__) || defined(__powerpc64__)
++#define PCI_ARCH_PPC64
++#elif defined(__ppc__)  || defined(__powerpc__)
++#define PCI_ARCH_PPC
++#elif defined(__s390x__)
++#define PCI_ARCH_S390X
++#elif defined(__s390__)
++#define PCI_ARCH_S390
++#elif defined(__alpha__)
++#define PCI_ARCH_ALPHA
++#else
++#error Unknown Arch
++#endif
++#define PCI_OS_LINUX
++#define PCI_HAVE_PM_LINUX_SYSFS
++#define PCI_HAVE_PM_LINUX_PROC
++#define PCI_HAVE_LINUX_BYTEORDER_H
++#define PCI_PATH_PROC_BUS_PCI "/proc/bus/pci"
++#define PCI_PATH_SYS_BUS_PCI "/sys/bus/pci"
++#define PCI_HAVE_64BIT_ADDRESS
++EOF
++
++rm -f $cm
++echo >$cm "#define PCI_ARCH_`echo $cpu | tr 'a-z' 'A-Z'`"
++echo >>$cm "#define PCI_OS_`echo $sys | tr 'a-z' 'A-Z'`"
+ 
+ echo_n "Looking for access methods..."
++echo_n " sysfs proc"
+ LIBRESOLV=-lresolv
+ 
+ case $sys in
+ 	linux*)
+ 		echo_n " sysfs proc"
+-		echo >>$c '#define PCI_HAVE_PM_LINUX_SYSFS'
+-		echo >>$c '#define PCI_HAVE_PM_LINUX_PROC'
+-		echo >>$c '#define PCI_HAVE_LINUX_BYTEORDER_H'
+-		echo >>$c '#define PCI_PATH_PROC_BUS_PCI "/proc/bus/pci"'
+-		echo >>$c '#define PCI_PATH_SYS_BUS_PCI "/sys/bus/pci"'
++		echo >>$cm '#define PCI_HAVE_PM_LINUX_SYSFS'
++		echo >>$cm '#define PCI_HAVE_PM_LINUX_PROC'
++		echo >>$cm '#define PCI_HAVE_LINUX_BYTEORDER_H'
++		echo >>$cm '#define PCI_PATH_PROC_BUS_PCI "/proc/bus/pci"'
++		echo >>$cm '#define PCI_PATH_SYS_BUS_PCI "/sys/bus/pci"'
+ 		case $cpu in
+ 				i?86|x86_64)	echo_n " i386-ports"
+-						echo >>$c '#define PCI_HAVE_PM_INTEL_CONF'
++						echo >>$cm '#define PCI_HAVE_PM_INTEL_CONF'
+ 						;;
+ 		esac
+-		echo >>$c '#define PCI_HAVE_64BIT_ADDRESS'
++		echo >>$cm '#define PCI_HAVE_64BIT_ADDRESS'
+ 		;;
+ 	sunos)
+ 		case $cpu in
+@@ -153,6 +188,7 @@ else
+ 	echo >>$c '#define PCI_IDS "pci.ids"'
+ fi
+ echo >>$c "#define PCI_PATH_IDS_DIR \"$IDSDIR\""
++echo >>$cm "#define PCI_PATH_IDS_DIR \"$IDSDIR\""
+ 
+ echo_n "Checking for DNS support... "
+ if [ "$DNS" = yes -o "$DNS" = no ] ; then
+@@ -167,6 +203,7 @@ else
+ fi
+ if [ "$DNS" = yes ] ; then
+ 	echo >>$c "#define PCI_USE_DNS"
++	echo >>$cm "#define PCI_USE_DNS"
+ 	echo >>$c "#define PCI_ID_DOMAIN \"pci.id.ucw.cz\""
+ 	echo >>$m "WITH_LIBS+=$LIBRESOLV"
+ fi
+@@ -189,4 +226,5 @@ fi
+ echo >>$m 'PCILIBPC=$(LIBNAME).pc'
+ 
+ echo >>$c "#define PCILIB_VERSION \"$VERSION\""
+-sed '/"/{s/^#define \([^ ]*\) "\(.*\)"$/\1=\2/;p;d;};s/^#define \(.*\)/\1=1/' <$c >>$m
++echo >>$cm "#define PCILIB_VERSION \"$VERSION\""
++sed '/"/{s/^#define \([^ ]*\) "\(.*\)"$/\1=\2/;p;d;};s/^#define \(.*\)/\1=1/' <$cm >>$m
+\ No newline at end of file
